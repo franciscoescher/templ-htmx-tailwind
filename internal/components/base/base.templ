@@ -1,8 +1,11 @@
 package base
 
 import (
+	"context"
+	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/dig"
+	"io"
 	"platform/internal/components"
 	"platform/internal/logger"
 	"platform/internal/utils"
@@ -64,7 +67,7 @@ templ (cmp *Component) Base(cs ...templ.Component) {
 			<script type="module" src="/src/entry.js"></script>
 			<script src="https://unpkg.com/htmx.org@2.0.2"></script>
 		</head>
-		<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+		<body class="bg-gray-100 min-h-screen">
 			for _, c := range cs {
 				@c
 			}
@@ -73,12 +76,12 @@ templ (cmp *Component) Base(cs ...templ.Component) {
 }
 
 templ (cmp *Component) main(initial templ.Component) {
-	<div id="wrapper" class="max-w-md p-0 bg-white shadow-lg w-full">
-		@cmp.Nav(cmp.items)
-		<main id="content" class="p-8">
+	@cmp.Nav(cmp.items)
+	<main class="p-8">
+		<div id="content">
 			@initial
-		</main>
-	</div>
+		</div>
+	</main>
 }
 
 func (cmp *Component) Main(initial string) templ.Component {
@@ -102,23 +105,128 @@ templ (cmp *Component) NotFound() {
 	</div>
 }
 
-templ (cmp *Component) Nav(items []MenuItem) {
-	<header class="bg-white shadow">
-		<nav class="container mx-auto p-4 flex justify-between items-center">
-			@cmp.logoComponent
-			<ul id="navbar" class="flex space-x-6">
-				for _, item := range items {
-					<li>
-						<a
-							href={ item.URL }
-							hx-get={ cmp.childrenUrlPrefix + string(item.URL) }
-							hx-target="#content"
-							hx-push-url={ string(item.URL) }
-							class="text-gray-700 hover:text-blue-500 px-3 py-2 rounded-md text-sm font-medium"
-						>{ item.Title }</a>
-					</li>
+// Define the MediaQuery template component.
+func MediaQuery(customHandler string) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+		_, err = io.WriteString(w, fmt.Sprintf(`
+			<script>
+				// Define the media query for the md breakpoint (768px)
+				const mediaQuery = window.matchMedia('(min-width: 768px)');
+
+				// Function to handle the media query change
+				function handleMediaQueryChange(e) {
+					%v
 				}
-			</ul>
+
+				// Add the listener for changes in the media query
+				mediaQuery.addListener(handleMediaQueryChange);
+
+				// Run the function once initially to check the current screen size
+				handleMediaQueryChange(mediaQuery);
+			</script>
+		`, customHandler))
+		return
+	})
+}
+
+templ (cmp *Component) Nav(items []MenuItem) {
+	<header class="flex flex-wrap  justify-start z-50 w-full bg-white border-b border-gray-200 dark:bg-neutral-800 dark:border-neutral-700">
+		<nav class="relative max-w-[85rem] w-full mx-auto flex items-center justify-between gap-3 py-2 px-4 sm:px-6 lg:px-8">
+			<div class="flex justify-between items-center gap-x-1 w-full">
+				<a class="flex-none font-semibold text-xl text-black focus:outline-none focus:opacity-80 dark:text-white" href="#" aria-label="Brand">
+					@cmp.logoComponent
+				</a>
+				<!-- Collapse Button -->
+				<button
+					id="hs-header-base-collapse"
+					type="button"
+					class="hs-collapse-toggle md:hidden relative size-9 flex justify-center items-center font-medium text-[12px] rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:border-neutral-700 dark:hover:bg-neutral-700 dark:focus:bg-neutral-700"
+					aria-expanded="false"
+					aria-controls="hs-header-base"
+					aria-label="Toggle navigation"
+					data-hs-collapse="#hs-header-base"
+				>
+					<svg class="hs-collapse-open:hidden size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="6" y2="6"></line><line x1="3" x2="21" y1="12" y2="12"></line><line x1="3" x2="21" y1="18" y2="18"></line></svg>
+					<svg class="hs-collapse-open:block shrink-0 hidden size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+					<span class="sr-only">Toggle navigation</span>
+				</button>
+				<!-- End Collapse Button -->
+			</div>
+			<!-- Collapse -->
+			<div
+				id="hs-header-base"
+				class="hs-collapse hidden absolute top-full left-0 right-0 z-50 bg-white overflow-hidden transition-all duration-300 basis-full grow md:relative md:top-0 md:z-auto md:bg-transparent"
+				aria-labelledby="hs-header-base-collapse"
+			>
+				<div class="flex flex-col gap-y-4 gap-x-0 mt-5 md:flex-row md:justify-end md:items-center md:gap-y-0 md:gap-x-7 md:mt-0">
+					<div class="py-2 md:py-0 md:px-0 flex flex-col md:flex-row md:items-center gap-0.5 md:gap-1 px-2">
+						<ul class="flex flex-col md:flex-row md:justify-end md:items-center gap-0.5 md:gap-1">
+							for _, item := range items {
+								<li>
+									<a
+										href={ item.URL }
+										hx-get={ cmp.childrenUrlPrefix + string(item.URL) }
+										hx-target="#content"
+										hx-push-url={ string(item.URL) }
+										class="p-2 flex items-center text-sm text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:bg-gray-100 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:focus:bg-neutral-700"
+									>{ item.Title }</a>
+								</li>
+							}
+						</ul>
+					</div>
+				</div>
+			</div>
 		</nav>
 	</header>
+	@MediaQuery(`
+		const menu = document.getElementById('hs-header-base');
+		if (e.matches) {
+			// If the screen width is at least the size
+			menu.classList.add('force-show');
+		} else {
+			// If the screen width is less than the size
+			menu.classList.remove('force-show');
+		}
+	`)
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			const toggleButton = document.getElementById('hs-header-base-collapse');
+			const collapsibleMenu = document.getElementById('hs-header-base');
+
+			toggleButton.addEventListener('click', function () {
+				const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+
+				if (isExpanded) {
+					// Collapse the menu
+					collapsibleMenu.style.maxHeight = `${collapsibleMenu.scrollHeight}px`; // Start from current height for animation
+					setTimeout(() => {
+						collapsibleMenu.style.maxHeight = '0'; // Set to 0 to collapse
+					}, 10); // Small delay to allow the browser to calculate the height before collapsing
+				} else {
+					// Expand the menu
+					collapsibleMenu.style.maxHeight = '0'; // Start collapsed
+					collapsibleMenu.classList.remove('hidden'); // enforce show class to show it
+					setTimeout(() => {
+						collapsibleMenu.style.maxHeight = `${collapsibleMenu.scrollHeight}px`; // Set to scrollHeight to grow
+					}, 10); // Delay to trigger the animation
+				}
+
+				// Toggle aria-expanded
+				toggleButton.setAttribute('aria-expanded', !isExpanded);
+
+				// Reset max-height after animation
+				setTimeout(() => {
+					if (!isExpanded) {
+						collapsibleMenu.style.maxHeight = 'none'; // After expansion, allow natural height
+					}
+				}, 300); // Matches the transition duration
+			});
+		});
+	</script>
+	<style> 
+		.force-show {
+			display: block !important;
+			max-height: none !important;
+		}
+	</style>
 }

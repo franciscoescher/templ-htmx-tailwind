@@ -6,8 +6,20 @@ module.exports = {
     './internal/components/**/*.go',
   ],
   theme: {
-    extend: {},
+    extend: {
+      screens: {
+        'md': '768px',
+      },
+    },
   },
-  plugins: [],
+  plugins: [
+    function ({ addBase, theme }) {
+      addBase({
+        ':root': {
+          '--breakpoint-md': theme('screens.md'),
+        },
+      });
+    },
+  ],
 }
 
