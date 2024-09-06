@@ -1,0 +1,59 @@
+package components
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"net/http"
+	"platform/internal/logger"
+	"platform/internal/utils"
+	"strconv"
+)
+
+type Controller struct {
+	logger *logger.Logger
+}
+
+func NewController(logger *logger.Logger) *Controller {
+	return &Controller{
+		logger: logger,
+	}
+}
+
+func (ctrl *Controller) ClickBtn(ctx *fiber.Ctx) error {
+	f := func(ctx *fiber.Ctx) (templ.Component, error) {
+		clicked := ctx.Params("clicked")
+		clickedBool := clicked == "true"
+		return ctrl.Clicked(ctx, !clickedBool), nil
+	}
+	return utils.RenderForFiber(f)(ctx)
+}
+
+func (ctrl *Controller) Clicked(ctx *fiber.Ctx, clicked bool) templ.Component {
+	path := "/clicked/" + strconv.FormatBool(clicked)
+	text := "Click Me"
+	if clicked {
+		text = "Clicked"
+	}
+	return Button(http.MethodPost, path, text)
+}
+
+templ Home() {
+	<div>Welcome Home!</div>
+}
+
+templ About() {
+	<div>Welcome About!</div>
+}
+
+templ Contact() {
+	<div>Welcome Contact!</div>
+}
+
+templ Logo() {
+	<div class="text-xl font-bold text-gray-700">My Website</div>
+}
+
+templ NotFound() {
+	<div>
+		Not Found
+	</div>
+}

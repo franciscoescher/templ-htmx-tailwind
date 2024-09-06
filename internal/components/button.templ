@@ -1,0 +1,24 @@
+package components
+
+import "net/http"
+
+templ Button(method string, path string, text string) {
+	<button
+		if method == http.MethodPost {
+			hx-post={ path }
+		}
+		if method == http.MethodPut {
+			hx-put={ path }
+		}
+		if method == http.MethodDelete {
+			hx-delete={ path }
+		}
+		if method == http.MethodGet {
+			hx-get={ path }
+		}
+		hx-swap="outerHTML"
+		class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75"
+	>
+		{ text }
+	</button>
+}

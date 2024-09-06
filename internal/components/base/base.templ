@@ -1,0 +1,124 @@
+package base
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"go.uber.org/dig"
+	"platform/internal/components"
+	"platform/internal/logger"
+	"platform/internal/utils"
+)
+
+const DefaultUrlPrefix = "/base"
+
+type MenuItem struct {
+	Title     string
+	URL       templ.SafeURL
+	Component templ.Component
+}
+
+type Component struct {
+	logger            *logger.Logger
+	items             []MenuItem
+	childrenUrlPrefix string
+	logoComponent     templ.Component
+}
+
+type Params struct {
+	dig.In
+	Logger *logger.Logger
+	Items  []MenuItem
+}
+
+func New(p Params) utils.Controller {
+	cmp := &Component{
+		logger:            p.Logger,
+		items:             p.Items,
+		logoComponent:     components.Logo(),
+		childrenUrlPrefix: DefaultUrlPrefix,
+	}
+	return cmp
+}
+
+func (cmp *Component) Register(f *fiber.App) {
+	for _, item := range cmp.GetItems() {
+		f.Get(string(item.URL), utils.RenderForFiber(func(ctx *fiber.Ctx) (templ.Component, error) {
+			return cmp.Base(cmp.Main(ctx.Path())), nil
+		}))
+		f.Get(cmp.childrenUrlPrefix+string(item.URL), utils.RenderForFiber(func(ctx *fiber.Ctx) (templ.Component, error) {
+			return item.Component, nil
+		}))
+	}
+}
+
+func (cmp *Component) GetItems() []MenuItem {
+	return cmp.items
+}
+
+templ (cmp *Component) Base(cs ...templ.Component) {
+	<html lang="en" class="scroll-smooth">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>htmx example</title>
+			<link rel="stylesheet" href="/src/entry.css"/>
+			<script type="module" src="/src/entry.js"></script>
+			<script src="https://unpkg.com/htmx.org@2.0.2"></script>
+		</head>
+		<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+			for _, c := range cs {
+				@c
+			}
+		</body>
+	</html>
+}
+
+templ (cmp *Component) main(initial templ.Component) {
+	<div id="wrapper" class="max-w-md p-0 bg-white shadow-lg w-full">
+		@cmp.Nav(cmp.items)
+		<main id="content" class="p-8">
+			@initial
+		</main>
+	</div>
+}
+
+func (cmp *Component) Main(initial string) templ.Component {
+	var c templ.Component
+	for _, item := range cmp.items {
+		if string(item.URL) == initial {
+			c = item.Component
+			break
+		}
+	}
+	if c == nil {
+		return cmp.main(cmp.NotFound())
+	}
+
+	return cmp.main(c)
+}
+
+templ (cmp *Component) NotFound() {
+	<div>
+		Not Found
+	</div>
+}
+
+templ (cmp *Component) Nav(items []MenuItem) {
+	<header class="bg-white shadow">
+		<nav class="container mx-auto p-4 flex justify-between items-center">
+			@cmp.logoComponent
+			<ul id="navbar" class="flex space-x-6">
+				for _, item := range items {
+					<li>
+						<a
+							href={ item.URL }
+							hx-get={ cmp.childrenUrlPrefix + string(item.URL) }
+							hx-target="#content"
+							hx-push-url={ string(item.URL) }
+							class="text-gray-700 hover:text-blue-500 px-3 py-2 rounded-md text-sm font-medium"
+						>{ item.Title }</a>
+					</li>
+				}
+			</ul>
+		</nav>
+	</header>
+}
